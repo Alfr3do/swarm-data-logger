@@ -58,6 +58,10 @@ def save_data_to_db(collection_name='test', data={}):
     else:
         print("Data collection completed.")
 
+def save_data_to_file(file, data={}):
+
+    if data:
+        file.write(data)
 
 if __name__ == "__main__":
     asvid = 0
@@ -78,13 +82,13 @@ if __name__ == "__main__":
             print("not successful")
             pass
         
-    with surveyor.Surveyor() as s:
+    with surveyor.Surveyor() as s, open(collection_name+".csv", "w") as file:
         for i in range(1000):
             try:
                 current_coordinates = s.get_gps_coordinates()
                 data = read_sensor_data(e, current_coordinates, asvid)
                 save_data_to_db(data=data, collection_name=collection_name)
-
+                save_data_to_file(file, data)
                 print(data)
             except:
                 pass
