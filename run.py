@@ -7,10 +7,11 @@ import datetime
 from pymongo import MongoClient
 import certifi
 import sys
+import os
 
 current_coordinates = None
 
-CONNECTION_STRING = ""
+CONNECTION_STRING = os.environ['COSMODB_STRING']
 client = MongoClient(CONNECTION_AWS, tlsCAFile=certifi.where())
 
 keys = []
