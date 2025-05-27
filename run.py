@@ -65,11 +65,17 @@ def save_data_to_file(file, data={}):
 
 if __name__ == "__main__":
     asvid = 0
+    mission_name = datetime.datetime.now().strftime("%Y%m%d%H%M")
     print(sys.argv)
+
+    if len(sys.argv) <= 1 :
+        print("*** ATENTION *** python run.py [id] [mission_name], to save the ASV id, and name the mission")
     if len(sys.argv) > 1 :
         asvid = sys.argv[1]
+    if len(sys.argv) > 2 :
+        mission_name = asvid = sys.argv[1]
         
-    collection_name = 'mission_' + datetime.datetime.now().strftime("%Y%m%d%H%M")
+    collection_name = 'mission_' + mission_name
     instant_fault = True
     keys = []
     while (instant_fault):
