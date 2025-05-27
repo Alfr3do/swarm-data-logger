@@ -11,7 +11,7 @@ import os
 
 current_coordinates = None
 
-CONNECTION_STRING = os.environ['COSMODB_STRING']
+CONNECTION_AWS = os.environ['COSMODB_STRING']
 client = MongoClient(CONNECTION_AWS, tlsCAFile=certifi.where())
 
 keys = []
