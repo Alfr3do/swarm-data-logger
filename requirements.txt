@@ -19,7 +19,6 @@ pytz
 PyYAML
 readchar
 runs
-serial
 six
 tzdata
 wcwidth
