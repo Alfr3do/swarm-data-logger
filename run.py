@@ -7,6 +7,7 @@ from pymongo import MongoClient
 import certifi
 import sys
 import os
+import geopy.distance
 
 current_coordinates = None
 
@@ -18,6 +19,8 @@ keys = []
 port = '/dev/ttyUSB0'
 baudrate = 9600
 take_samples = False
+sample_points = []
+MIN_DIST = 0.0001
 
 
 def read_sensor_data(sensor, coordinates=(0,0), asvid=0):
@@ -58,9 +61,11 @@ def save_data_to_db(collection_name='test', data={}):
         print("Data collection completed.")
 
 def save_data_to_file(file, data={}):
-
+    
     if data:
         file.write(data)
+def take_sample(pos):
+    print("taking sample at ", pos)
 
 if __name__ == "__main__":
     asvid = 0
@@ -77,6 +82,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 3 :
         sample_points_file = sys.argv[3]
         take_samples = True
+        with open(sample_points_file, 'r+') as f:
+            for line in f:
+                point = line.strip().split(",")
+                sample_points.append((float(point[0]),float(point[1])))
     
     collection_name = 'mission_' + mission_name
     instant_fault = True
@@ -95,6 +104,15 @@ if __name__ == "__main__":
         for i in range(1000):
             try:
                 current_coordinates = s.get_gps_coordinates()
+                if (take_samples):
+                    for i in range(sample_points):
+                        distance = geopy.distance.geodesic(sample_points[i], current_coordinates)
+                        print(f"distance to {i} is {distance}")
+                        if distance < MIN_DIST:
+                            take_sample(current_coordinates)
+                            sample_points.remove(i)
+                            break
+                            
                 data = read_sensor_data(e, current_coordinates, asvid)
                 save_data_to_db(data=data, collection_name=collection_name)
                 save_data_to_file(file, data)
