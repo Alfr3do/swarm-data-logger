@@ -119,7 +119,20 @@ class Exo2():
 	def __enter__ (self):
 		return self
 
-
+	def initialSetup(self, params):
+		time.sleep(0.5)
+		self.serial.write(b'setecho 1\r')
+		command = self.serial.readline()
+		data = self.serial.readline()
+		print("Echo: "+data)
+		self.serial.write(b'pwruptorun 0\r')
+		command = self.serial.readline()
+		data = self.serial.readline()
+		print("No run: "+data)
+		self.serial.write(b'para '+params+'\r')
+		command = self.serial.readline()
+		data = self.serial.readline()
+		print("parameters: "+data)
 	def get_active_usb_serial_ports(self):
 		# Get a list of all available serial ports
 

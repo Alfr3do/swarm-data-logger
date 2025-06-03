@@ -93,6 +93,7 @@ if __name__ == "__main__":
     while (instant_fault):
         try:
             e = Exo2('localhost', port, 9600, 0.05, Exo2.SERIAL)
+            e.initialSetup('1 5 12 20 22 53 54 211 212')
             keys, _ = e.get_exo2_params()
             if len(keys) > 0:
                 instant_fault = False
