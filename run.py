@@ -2,7 +2,6 @@ import time
 import surveyor
 
 from exo2 import Exo2
-import serial
 import datetime
 from pymongo import MongoClient
 import certifi
@@ -18,7 +17,7 @@ keys = []
 #port = 'COM4'
 port = '/dev/ttyUSB0'
 baudrate = 9600
-
+take_samples = False
 
 
 def read_sensor_data(sensor, coordinates=(0,0), asvid=0):
@@ -73,8 +72,12 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 :
         asvid = sys.argv[1]
     if len(sys.argv) > 2 :
-        mission_name = asvid = sys.argv[1]
-        
+        mission_name = sys.argv[2]
+    
+    if len(sys.argv) > 3 :
+        sample_points_file = sys.argv[3]
+        take_samples = True
+    
     collection_name = 'mission_' + mission_name
     instant_fault = True
     keys = []
