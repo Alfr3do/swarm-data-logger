@@ -87,7 +87,7 @@ if __name__ == "__main__":
                 point = line.strip().split(",")
                 sample_points.append((float(point[0]),float(point[1])))
     
-    collection_name = 'mission_' + mission_name
+    collection_name = '' + mission_name
     instant_fault = True
     keys = []
     while (instant_fault):
