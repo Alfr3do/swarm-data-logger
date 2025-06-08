@@ -162,6 +162,23 @@ def get_control_mode(message):
     return None
 
 
+def get_timestamp(gga_message):
+    try:
+        gga = pynmea2.parse(gga_message)
+
+        if isinstance(gga, pynmea2.GGA):
+            # Use the attributes provided by pynmea2
+            return gga.timestamp
+
+    except pynmea2.ParseError:
+        pass
+    except ValueError:
+        pass
+    except TypeError:
+        pass
+
+    return None
+
 def get_coordinates(gga_message):
     try:
         gga = pynmea2.parse(gga_message)

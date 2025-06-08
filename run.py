@@ -8,6 +8,7 @@ import certifi
 import sys
 import os
 import geopy.distance
+import json
 
 current_coordinates = None
 
@@ -26,7 +27,7 @@ MIN_DIST = 0.0001
 def read_sensor_data(sensor, coordinates=(0,0), asvid=0):
     global keys
     data_string = sensor.read_data()
-    print("Data",data_string)
+    #print("Data",data_string)
     data_list = data_string.split()
     # print(len(data_list))
     if len(data_list) > 1:
@@ -43,27 +44,28 @@ def read_sensor_data(sensor, coordinates=(0,0), asvid=0):
         data_dict['timestamp'] = datetime.datetime.now()
         data_dict['metadata'] = {}
         data_dict['metadata']['asvid'] = asvid
+        data_dict['metadata']['sn'] = sensor.get_sn()
+        data_dict['metadata']['ssn'] = sensor.get_ssn()
         return data_dict
     else:
         pass
 
 def save_data_to_db(collection_name='test', data={}):
     # client = MongoClient(CONNECTION_STRING)
-    print(f"DB Client: {client}")
+    #print(f"DB Client: {client}")
     db = client.missions
-    print(f"DB: {db}")
+    #print(f"DB: {db}")
 
     collection = db[collection_name]
     if data:
         collection.insert_one(data)
         print('Data saved: ', data)
-    else:
-        print("Data collection completed.")
 
 def save_data_to_file(file, data={}):
     
     if data:
-        file.write(data)
+        file.write(json.dump(data))
+        file.flush()
 def take_sample(pos):
     print("taking sample at ", pos)
 
@@ -86,43 +88,49 @@ if __name__ == "__main__":
             for line in f:
                 point = line.strip().split(",")
                 sample_points.append((float(point[0]),float(point[1])))
-    
-    collection_name = '' + mission_name
-    instant_fault = True
-    keys = []
-    while (instant_fault):
-        try:
-            e = Exo2('localhost', port, 9600, 0.05, Exo2.SERIAL)
-            e.initialSetup('1 5 12 20 22 53 54 211 212')
-            keys, _ = e.get_exo2_params()
-            if len(keys) > 0:
-                instant_fault = False
-        except:
-            print("not successful")
-            pass
-        
-    with surveyor.Surveyor() as s, open(collection_name+".csv", "w") as file:
-        for i in range(1000):
+    try:
+        collection_name = '' + mission_name
+        instant_fault = True
+        keys = []
+        while (instant_fault):
             try:
-                current_coordinates = s.get_gps_coordinates()
-                if (take_samples):
-                    for i in range(sample_points):
-                        distance = geopy.distance.geodesic(sample_points[i], current_coordinates)
-                        print(f"distance to {i} is {distance}")
-                        if distance < MIN_DIST:
-                            take_sample(current_coordinates)
-                            sample_points.remove(i)
-                            break
-                            
-                data = read_sensor_data(e, current_coordinates, asvid)
-                save_data_to_db(data=data, collection_name=collection_name)
-                save_data_to_file(file, data)
-                print(data)
+                exo = Exo2('localhost', port, 9600, 0.05, Exo2.SERIAL)
+                exo.initial_setup('1 5 12 20 22 53 54 211 212')
+                keys, _ = exo.get_exo2_params()
+                if len(keys) > 0:
+                    instant_fault = False
             except:
+                print("not successful")
                 pass
             
-            time.sleep(5)
-    e.serial.close()
+        with surveyor.Surveyor(dummy=False) as s, open(collection_name+".csv", "w") as file:
+            for i in range(1000):
+                try:
+                    current_coordinates = s.get_gps_coordinates()
+                    current_time = s.get_timestamp()
+                    if (current_coordinates and current_coordinates[0] != 0):
+                        if (take_samples):
+                            for i in range(sample_points):
+                                distance = geopy.distance.geodesic(sample_points[i], current_coordinates)
+                                print(f"distance to {i} is {distance}")
+                                if distance < MIN_DIST:
+                                    take_sample(current_coordinates)
+                                    sample_points.remove(i)
+                                    break
+                                    
+                        data = read_sensor_data(exo, current_coordinates, asvid)
+                        save_data_to_db(data=data, collection_name=collection_name)
+                        save_data_to_file(file, data)
+                        print(data)
+                except Exception as exception:
+                    print(exception)
+                
+                time.sleep(0.2)
+    except Exception as exception:
+        print(exception)
+    finally:
+        exo.close()
+        client.close()
 
     # ser.close()
     print("Close the serial connection")

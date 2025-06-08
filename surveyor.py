@@ -7,11 +7,14 @@ import helper as hlp
 
 class Surveyor:
 
-    def __init__(self, host='192.168.0.50', port=8003):
+    def __init__(self, host='192.168.0.50', port=8003, dummy=False):
         self.host = host
         self.port = port
+        self.is_dummy = dummy
 
     def __enter__(self):
+        if self.is_dummy:
+            return self
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.socket.connect((self.host, self.port))
@@ -25,6 +28,9 @@ class Surveyor:
 
     def send(self, msg):
         msg = hlp.create_nmea_message(msg)
+        if self.is_dummy:
+            print('sending ', msg)
+            return 
         try:
             self.socket.send(msg.encode())
             time.sleep(0.001)
@@ -32,6 +38,8 @@ class Surveyor:
             print(f"Error sending message - {e}")
 
     def receive(self, bytes=1024):
+        if self.is_dummy:
+            return "..."
         try:
             time.sleep(0.01)
             data = self.socket.recv(bytes)
@@ -114,6 +122,25 @@ class Surveyor:
 
         return control_mode
 
+    def get_timestamp(self):
+        """
+        Get timestamp from the Surveyor connection object.
+
+        Parameters:
+            s: The Surveyor connection object.
+
+        Returns:
+            timestamp.
+        """
+        if (self.is_dummy):
+            return time.time()
+        timestamp = None
+        gga_message = None
+        while (timestamp == None) or (gga_message == None):
+            gga_message = hlp.get_gga(self.receive())
+            timestamp = hlp.get_timestamp(gga_message)
+
+        return timestamp
     def get_gps_coordinates(self):
         """
         Get GPS coordinates from the Surveyor connection object.
@@ -124,6 +151,8 @@ class Surveyor:
         Returns:
             Tuple containing GPS coordinates.
         """
+        if (self.is_dummy):
+            return [0,0]
         coordinates = None
         gga_message = None
         while (coordinates == None) or (gga_message == None):

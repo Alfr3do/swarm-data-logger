@@ -3,6 +3,7 @@ import serial
 from serial.tools import list_ports
 import requests
 import time
+import datetime
 
 class Exo2():
 
@@ -94,6 +95,9 @@ class Exo2():
 		self.baudrate=baudrate
 		self.timeout = timeout
 		self.conn_type = conn_type
+		self.is_echoing = True
+		self.sn = "" 
+		self.ssn = ""
 		if (test): self.conn_type = self.DUMMY
 		print('conn type: ', self.conn_type)
 
@@ -119,20 +123,58 @@ class Exo2():
 	def __enter__ (self):
 		return self
 
-	def initialSetup(self, params):
+	def get_sn(self):
+		if (not self.sn or self.sn == ""):
+			self.serial.write(b'sn\r')
+			res = self.get_response()
+			self.sn = str(res).strip()
+		return self.sn
+		
+	def get_ssn(self):
+		if (not self.ssn or self.ssn == ""):
+			self.serial.write(b'ssn\r')
+			res = self.get_response()
+			self.ssn = str(res).strip()
+		return self.ssn
+	def get_response(self):
+		if self.is_echoing:
+			command = self.serial.readline()
+		res = self.serial.readline()
+		return res
+	def initial_setup(self, params):
+		if (self.conn_type == self.DUMMY):
+			return
 		time.sleep(0.5)
-		self.serial.write(b'setecho 1\r')
-		command = self.serial.readline()
-		data = self.serial.readline()
-		print("Echo: "+data)
+		self.serial.write(b'0\r')
+		self.get_response()
+		time.sleep(0.5)
+		self.serial.write(b'setecho 0\r')
+		self.is_echoing = False
+		data = self.get_response()
+		print("Echo Off: "+data)
 		self.serial.write(b'pwruptorun 0\r')
-		command = self.serial.readline()
-		data = self.serial.readline()
-		print("No run: "+data)
+		res = self.get_response()
+		if str(res).strip() != "OK":
+			print("***** Error disabling power to run ****")
+			raise Exception("Could not turn off pwruptorun")
+		print("No pwruptorun: "+data)
 		self.serial.write(b'para '+params+'\r')
-		command = self.serial.readline()
-		data = self.serial.readline()
-		print("parameters: "+data)
+		res = self.get_response()
+		if str(res).strip() == "OK":
+			self.serial.write(b'para')
+			res = self.get_response()
+			print("data set: ", res)
+		else:
+			raise Exception("Could not set the Parameters")
+		new_time = datetime.now() + timedelta(seconds=2)
+		new_time = new_time.strftime('%H:%M:%S')
+		data = f"time {new_time}\r\n".encode('utf-8')
+		print("Setting time: ",data.decode())
+		self.serial.write(data)
+		res = self.get_response()
+		if str(res).strip() != "OK":
+			raise Exception("Error setting time")
+		
 	def get_active_usb_serial_ports(self):
 		# Get a list of all available serial ports
 
@@ -238,13 +280,18 @@ class Exo2():
 			param_list = list(map(int, param_str.split()))
 			print(param_list)
 		elif (self.conn_type == self.DUMMY):
-			param_list = [1,4]
+			return [1,4], ['test1', 'test2']
 		return {key : self.PARAMS_DICT[key] for key in param_list}
 
 	def start_collection(self):
 		#TODO: test if the encode is needed
 		self.serial.write(self.RUN_COMMAND.encode())
 
+	def close(self):
+		if (self.conn_type == self.SERIAL):
+			self.serial.close()
+		elif (self.conn_type == self.DUMMY):
+			pass
 	def __exit__(self, *args):
 		if (self.conn_type == self.SERIAL):
 			self.serial.close()
