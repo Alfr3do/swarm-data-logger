@@ -142,29 +142,36 @@ class Exo2():
 		res = self.serial.readline()
 		return res
 	def initial_setup(self, params):
+		print("initial setup")
 		if (self.conn_type == self.DUMMY):
 			return
 		time.sleep(0.5)
-		self.serial.write(b'0\r')
-		self.get_response()
+		self.serial.write(b'0')
+		self.serial.readline()
+		print("zero sent")
+		#self.get_response()
 		time.sleep(0.5)
 		self.serial.write(b'setecho 0\r')
-		self.is_echoing = False
+		#self.is_echoing = False
+		print("echo off")
 		data = self.get_response()
-		print("Echo Off: "+data)
-		self.serial.write(b'pwruptorun 0\r')
-		res = self.get_response()
-		if str(res).strip() != "OK":
-			print("***** Error disabling power to run ****")
-			raise Exception("Could not turn off pwruptorun")
-		print("No pwruptorun: "+data)
-		self.serial.write(b'para '+params+'\r')
+		self.serial.readline()
+		self.is_echoing = False
+		print("Echo Off: ",data)
+		#self.serial.write(b'pwruptorun 0\r')
+		#res = self.get_response()
+		#if str(res).strip() != "OK":
+		#	print("***** Error disabling power to run ****",res)
+		#	raise Exception("Could not turn off pwruptorun")
+		#print("No pwruptorun: ",data)
+		self.serial.write(f"para {params} \r".encode('utf-8'))
 		res = self.get_response()
 		if str(res).strip() == "OK":
 			self.serial.write(b'para')
 			res = self.get_response()
 			print("data set: ", res)
 		else:
+			print("Respose: ",res)
 			raise Exception("Could not set the Parameters")
 		new_time = datetime.now() + timedelta(seconds=2)
 		new_time = new_time.strftime('%H:%M:%S')
@@ -240,7 +247,7 @@ class Exo2():
 		"""
 
 		exo2_data_str = self.get_data()
-		while not exo2_data_str or "#" in exo2_data_str:
+		while self.is_echoing and not exo2_data_str or "#" in exo2_data_str:
 			# Keep requesting data until a non-empty string (other than "#") is received
 			exo2_data_str = self.get_data()
 
@@ -262,7 +269,8 @@ class Exo2():
 			time.sleep(0.5)
 			self.serial.write(self.PARAM_COMMAND)
 			time.sleep(0.5)
-			command = self.serial.readline()
+			if self.is_echoing:
+				command = self.serial.readline()
 			data = self.serial.readline()
 			data_string = data.decode('utf-8').strip()
 			param_list = data_string.split()

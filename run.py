@@ -17,7 +17,7 @@ client = MongoClient(CONNECTION_AWS, tlsCAFile=certifi.where())
 
 keys = []
 #port = 'COM4'
-port = '/dev/ttyUSB0'
+port = '/dev/ttyUSB5'
 baudrate = 9600
 take_samples = False
 sample_points = []
@@ -64,7 +64,7 @@ def save_data_to_db(collection_name='test', data={}):
 def save_data_to_file(file, data={}):
     
     if data:
-        file.write(json.dump(data))
+        file.write(json.dumps(data,default=str))
         file.flush()
 def take_sample(pos):
     print("taking sample at ", pos)
@@ -95,12 +95,13 @@ if __name__ == "__main__":
         while (instant_fault):
             try:
                 exo = Exo2('localhost', port, 9600, 0.05, Exo2.SERIAL)
-                exo.initial_setup('1 5 12 20 22 53 54 211 212')
+                #exo.initial_setup('1 5 12 20 22 53 54 211 212')
                 keys, _ = exo.get_exo2_params()
                 if len(keys) > 0:
                     instant_fault = False
-            except:
-                print("not successful")
+            except Exception as ex:
+                print("not successful ",ex)
+                sys.exit()
                 pass
             
         with surveyor.Surveyor(dummy=False) as s, open(collection_name+".csv", "w") as file:
