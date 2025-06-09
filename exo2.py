@@ -269,8 +269,8 @@ class Exo2():
 			time.sleep(0.5)
 			self.serial.write(self.PARAM_COMMAND)
 			time.sleep(0.5)
-			if self.is_echoing:
-				command = self.serial.readline()
+			#if self.is_echoing:
+			command = self.serial.readline()
 			data = self.serial.readline()
 			data_string = data.decode('utf-8').strip()
 			param_list = data_string.split()

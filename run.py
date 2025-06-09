@@ -9,6 +9,7 @@ import sys
 import os
 import geopy.distance
 import json
+from watersampler import WaterSamplerController
 
 current_coordinates = None
 
@@ -17,11 +18,11 @@ client = MongoClient(CONNECTION_AWS, tlsCAFile=certifi.where())
 
 keys = []
 #port = 'COM4'
-port = '/dev/ttyUSB5'
+port = '/dev/ttyUSB0'
 baudrate = 9600
 take_samples = False
 sample_points = []
-MIN_DIST = 0.0001
+MIN_DIST = 0.005
 
 
 def read_sensor_data(sensor, coordinates=(0,0), asvid=0):
@@ -66,16 +67,19 @@ def save_data_to_file(file, data={}):
     if data:
         file.write(json.dumps(data,default=str))
         file.flush()
-def take_sample(pos):
-    print("taking sample at ", pos)
+def take_sample(pos, sampler, filename,data):
+    data = json.dumps(data,default=str)
+    print("taking sample at ", pos, data)
+    sampler.sample_and_log(filename, data, updated_coords=pos)
 
 if __name__ == "__main__":
     asvid = 0
     mission_name = datetime.datetime.now().strftime("%Y%m%d%H%M")
+    sample_output = mission_name+"-samples.txt"
     print(sys.argv)
 
     if len(sys.argv) <= 1 :
-        print("*** ATENTION *** python run.py [id] [mission_name], to save the ASV id, and name the mission")
+        print("*** ATENTION *** python run.py [id] [mission_name] [sample_points_file] [samples_ouput], to save the ASV id, and name the mission")
     if len(sys.argv) > 1 :
         asvid = sys.argv[1]
     if len(sys.argv) > 2 :
@@ -87,8 +91,12 @@ if __name__ == "__main__":
         with open(sample_points_file, 'r+') as f:
             for line in f:
                 point = line.strip().split(",")
+                print(point)
                 sample_points.append((float(point[0]),float(point[1])))
+    if len(sys.argv) > 4 :
+        sample_output = sys.argv[4]
     try:
+        sampler = WaterSamplerController()
         collection_name = '' + mission_name
         instant_fault = True
         keys = []
@@ -97,6 +105,7 @@ if __name__ == "__main__":
                 exo = Exo2('localhost', port, 9600, 0.05, Exo2.SERIAL)
                 #exo.initial_setup('1 5 12 20 22 53 54 211 212')
                 keys, _ = exo.get_exo2_params()
+                print("keys ",keys)
                 if len(keys) > 0:
                     instant_fault = False
             except Exception as ex:
@@ -105,21 +114,26 @@ if __name__ == "__main__":
                 pass
             
         with surveyor.Surveyor(dummy=False) as s, open(collection_name+".csv", "w") as file:
+            print("running surveyor")
             for i in range(1000):
                 try:
                     current_coordinates = s.get_gps_coordinates()
-                    current_time = s.get_timestamp()
+                    #print("here ", current_coordinates)
+                    #current_time = s.get_timestamp()
+                    print(current_coordinates)
                     if (current_coordinates and current_coordinates[0] != 0):
+                        
+                        data = read_sensor_data(exo, current_coordinates, asvid)
+
                         if (take_samples):
-                            for i in range(sample_points):
+                            for i in range(len(sample_points)):
                                 distance = geopy.distance.geodesic(sample_points[i], current_coordinates)
                                 print(f"distance to {i} is {distance}")
                                 if distance < MIN_DIST:
-                                    take_sample(current_coordinates)
-                                    sample_points.remove(i)
+                                    sample_points.remove(sample_points[i])
+                                    take_sample(current_coordinates, sampler, sample_output,data)
                                     break
                                     
-                        data = read_sensor_data(exo, current_coordinates, asvid)
                         save_data_to_db(data=data, collection_name=collection_name)
                         save_data_to_file(file, data)
                         print(data)

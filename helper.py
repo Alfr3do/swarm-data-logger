@@ -7,7 +7,7 @@ import sys
 from geopy.distance import geodesic
 import pynmea2
 
-import numpy as np
+#import numpy as np
 import pandas as pd
 
 
@@ -103,11 +103,11 @@ def append_tuple_to_csv(data_tuple, post_fix="", cols=["latitude", "longitude", 
 
 def add_laplace_to_tuple(input_tuple, epsilon=1000000):
     # Create Laplacian noise with the same shape as the input tuple
-    noise = np.random.laplace(scale=1 / epsilon, size=len(input_tuple))
+    #noise = np.random.laplace(scale=1 / epsilon, size=len(input_tuple))
 
     # Add noise to each element in the input tuple
-    noisy_tuple = tuple(input_val + noise_val for input_val, noise_val in zip(input_tuple, noise))
-
+    #noisy_tuple = tuple(input_val + noise_val for input_val, noise_val in zip(input_tuple, noise))
+    noisy_tuple = 0
     return noisy_tuple
 
 

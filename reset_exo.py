@@ -1,6 +1,6 @@
 from exo2 import Exo2
 
-port = '/dev/ttyUSB5'
+port = '/dev/ttyUSB0'
 
 exo = Exo2('',port,9600,0.05,Exo2.SERIAL)
 
